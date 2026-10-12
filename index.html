@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест клавиатуры — Розыгрыш Premium</title>
+    <style>
+        :root {
+            --bg-main: #0a0b10;
+            --bg-card: #121420;
+            --primary: #5865F2;
+            --accent: #00fa9a;
+            --text-main: #ffffff;
+            --text-muted: #72767d;
+            --error: #ff4757;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .game-container {
+            background-color: var(--bg-card);
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .description {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-bottom: 25px;
+            line-height: 1.4;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 25px;
+        }
+
+        .stat-box {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 12px 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            min-width: 110px;
+        }
+
+        .stat-val {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--accent);
+        }
+
+        .stat-lbl {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-top: 3px;
+        }
+
+        .display-letter {
+            font-size: 72px;
+            font-weight: 900;
+            margin: 20px 0;
+            color: var(--primary);
+            text-shadow: 0 0 20px rgba(88, 101, 242, 0.4);
+            height: 90px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .input-hidden {
+            position: absolute;
+            opacity: 0;
+            z-index: -1;
+        }
+
+        .start-btn, .action-btn {
+            background: linear-gradient(45deg, var(--primary), #4752c4);
+            color: white;
+            padding: 14px 28px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.2s;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 15px;
+        }
+
+        .start-btn:active, .action-btn:active {
+            transform: scale(0.98);
+        }
+
+        .result-box {
+            display: none;
+            margin-top: 15px;
+            padding: 20px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .result-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .success { color: var(--accent); }
+        .fail { color: var(--error); }
+
+        /* Специальная зона клика для мобильных устройств */
+        .mobile-tap-zone {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px dashed var(--text-muted);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <h1>Тест клавиатуры</h1>
+        <p class="description">Успей правильно набрать 15 случайных букв за 30 секунд, чтобы открыть секретную кнопку и попасть в розыгрыш примок в Телеграме!</p>
+
+        <div class="stats-row">
+            <div class="stat-box">
+                <div class="stat-val" id="timer">30</div>
+                <div class="stat-lbl">Время (сек)</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-val" id="score">0</div>
+                <div class="stat-lbl">Буквы (15)</div>
+            </div>
+        </div>
+
+        <div class="display-letter" id="letter-box">⌛</div>
+
+        <!-- Поле перехвата ввода -->
+        <input type="text" id="keyboard-interceptor" class="input-hidden" autocomplete="off" autocapitalize="off">
+
+        <button class="start-btn" id="ctrl-btn" onclick="startGame()">Начать тест</button>
+
+        <div class="mobile-tap-zone" id="tap-zone" style="display:none;" onclick="focusInput()">
+            ⌨️ Играешь с планшета/телефона? Нажми сюда для вызова клавиатуры
+        </div>
+
+        <div class="result-box" id="result-screen">
+            <div class="result-title" id="res-heading">Конец игры!</div>
+            <p id="res-text" style="font-size: 14px; margin-bottom: 15px; color: var(--text-muted);"></p>
+            <div id="prize-link-container"></div>
+        </div>
+    </div>
+
+    <script>
+        const letters = "АБВГДЕЖЗИКЛМНОПРСТУФХЦЧШЭЮЯ";
+        let currentLetter = "";
+        let score = 0;
+        let timeLeft = 30;
+        let timerInterval = null;
+        let isPlaying = false;
+
+        const letterBox = document.getElementById("letter-box");
+        const timerDisplay = document.getElementById("timer");
+        const scoreDisplay = document.getElementById("score");
+        const ctrlBtn = document.getElementById("ctrl-btn");
+        const resultScreen = document.getElementById("result-screen");
+        const resHeading = document.getElementById("res-heading");
+        const resText = document.getElementById("res-text");
+        const prizeLinkContainer = document.getElementById("prize-link-container");
+        const inputField = document.getElementById("keyboard-interceptor");
+        const tapZone = document.getElementById("tap-zone");
+
+        function nextLetter() {
+            const index = Math.floor(Math.random() * letters.length);
+            currentLetter = letters[index];
+            letterBox.innerText = currentLetter;
+            inputField.value = "";
+        }
+
+        function focusInput() {
+            if (isPlaying) {
+                inputField.focus();
+            }
+        }
+
+        function startGame() {
+            if (isPlaying) return;
+
+            isPlaying = true;
+            score = 0;
+            timeLeft = 30;
+            
+            scoreDisplay.innerText = score;
+            timerDisplay.innerText = timeLeft;
+            resultScreen.style.display = "none";
+            prizeLinkContainer.innerHTML = "";
+            ctrlBtn.style.display = "none";
+            tapZone.style.display = "block";
+
+            nextLetter();
+            inputField.focus();
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerDisplay.innerText = timeLeft;
+
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        inputField.addEventListener("input", (e) => {
+            if (!isPlaying) return;
+            
+            const typedChar = e.target.value.slice(-1).toUpperCase();
+            
+            if (typedChar === currentLetter) {
+                score++;
+                scoreDisplay.innerText = score;
+                nextLetter();
+            } else {
+                inputField.value = ""; 
+            }
+        });
+
+        function endGame() {
+            clearInterval(timerInterval);
+            isPlaying = false;
+            ctrlBtn.innerText = "Попробовать снова";
+            ctrlBtn.style.display = "inline-block";
+            tapZone.style.display = "none";
+            letterBox.innerText = "🏁";
+            resultScreen.style.display = "block";
+
+            if (score >= 15) {
+                resHeading.className = "result-title success";
+                resHeading.innerText = "Успешно! Доступ открыт!";
+                resText.innerText = `Ты набрал ${score} букв(ы) за 30 секунд. Кнопка для связи и перехода в канал активна!`;
+                
+                // Перенаправление на твой конкретный канал
+                prizeLinkContainer.innerHTML = `
+                    <a href="https://t.me/alinlav" target="_blank" class="action-btn" style="background: linear-gradient(45deg, var(--accent), #00c473); color: #000;">
+                        Перейти в канал к розыгрышу 🎁
+                    </a>`;
+            } else {
+                resHeading.className = "result-title fail";
+                resHeading.innerText = "Не хватило скорости!";
+                resText.innerText = `Ты набрал ${score} букв(ы). Нужно минимум 15 для открытия секретной ссылки.`;
+            }
+        }
+    </script>
+</body>
+</html>
